@@ -1,5 +1,5 @@
 from utils.DBUtils import DBUtils
-from data.AdminEvent import AdminEvent
+from model.AdminEvent import AdminEvent
 from psycopg2 import DatabaseError
 
 adminEventInsertSql = """
