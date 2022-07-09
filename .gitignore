@@ -130,3 +130,6 @@ dmypy.json
 
 # Database info
 database.ini
+
+# VSCode
+.vscode
