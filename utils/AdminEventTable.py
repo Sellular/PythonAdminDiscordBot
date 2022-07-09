@@ -1,4 +1,5 @@
-from utils.DBUtils import DBUtils
+from distutils.log import error
+from utils import DBUtils
 from model.AdminEvent import AdminEvent
 from psycopg2 import DatabaseError
 
@@ -17,10 +18,7 @@ adminEventInsertSql = """
 """
 
 adminEventSelectByUserSql = """
-    SELECT 
-        event_code,
-        event_reason, 
-        event_timestamp 
+    SELECT *
     FROM admin_events 
     WHERE 
         user_id = %s AND
@@ -28,49 +26,122 @@ adminEventSelectByUserSql = """
     ORDER BY event_timestamp
 """
 
-class AdminEventTable:
+adminEventLimitSelectByUserSql = """
+    SELECT *
+    FROM (
+        SELECT *
+        FROM admin_events
+        WHERE 
+            user_id = %s AND
+            guild_id = %s
+        ORDER BY event_timestamp DESC
+        LIMIT %s
+    ) AS reversed
+    ORDER BY event_timestamp
+"""
 
-    def insert(userID, guildID, eventCode, reason = None):
-        dbConnection = DBUtils.getDBConnection()
-        try:
-            dbCursor = dbConnection.cursor()
+adminEventSelectByIdSql = """
+    SELECT *
+    FROM admin_events
+    WHERE event_id = %s
+    ORDER BY event_timestamp
+    FETCH FIRST ROW ONLY
+"""
 
-            dbCursor.execute(adminEventInsertSql, (userID, guildID, eventCode, reason))
+def insert(userID, guildID, eventCode, reason = None):
+    dbConnection = DBUtils.getDBConnection()
+    try:
+        dbCursor = dbConnection.cursor()
 
-            dbConnection.commit()
-            dbCursor.close()
-        except (Exception, DatabaseError) as error:
-            print(error)
-            raise error
-        finally:
-            if dbConnection is not None:
-                dbConnection.close()
+        dbCursor.execute(adminEventInsertSql, (userID, guildID, eventCode, reason))
 
-    def getUserEvents(userID, guildID):
-        dbConnection = DBUtils.getDBConnection()
-        try:
-            dbCursor = dbConnection.cursor()
-            
+        dbConnection.commit()
+        dbCursor.close()
+    except (Exception, DatabaseError) as error:
+        print(error)
+        raise error
+    finally:
+        if dbConnection is not None:
+            dbConnection.close()
+
+def getEventById(id):
+    dbConnection = DBUtils.getDBConnection()
+    try:
+        dbCursor = dbConnection.cursor()
+        dbCursor.execute(adminEventSelectByIdSql, (id))
+
+        row = dbCursor.fetchone()
+        userEvent = None
+
+        if row is not None:
+            userEvent = AdminEvent(
+                row[0],
+                row[1],
+                row[2],
+                row[3],
+                row[4],
+                row[5]
+            )
+
+        dbCursor.close()
+
+        return userEvent
+    except (Exception, DatabaseError) as error:
+        print(error)
+        raise error
+    finally:
+        if dbConnection is not None:
+            dbConnection.close()
+
+def getEventsByUserAndGuild(userID, guildID, limit):
+    dbConnection = DBUtils.getDBConnection()
+    try:
+        dbCursor = dbConnection.cursor()
+        
+        if limit is not None:
+            dbCursor.execute(adminEventLimitSelectByUserSql, (userID, guildID, limit))
+        else:
             dbCursor.execute(adminEventSelectByUserSql, (userID, guildID))
+        row = dbCursor.fetchone()
+
+        userEvents = []
+        while row is not None:
+            userEvents.append(AdminEvent(
+                row[0],
+                row[1],
+                row[2],
+                row[3],
+                row[4],
+                row[5]
+            ))
             row = dbCursor.fetchone()
 
-            userEvents = []
-            while row is not None:
-                userEvents.append(AdminEvent(
-                    userID,
-                    guildID,
-                    row[0],
-                    row[1],
-                    row[2]
-                ))
-                row = dbCursor.fetchone()
+        dbCursor.close()
+        
+        return userEvents
+    except (Exception, DatabaseError) as error:
+        print(error)
+        raise error
+    finally:
+        if dbConnection is not None:
+            dbConnection.close()
 
-            dbCursor.close()
+def formatEventToEmbedParms(event):
+    eventParms = {
+        "name": '',
+        "value": '',
+        "reason": ''
+    }
 
-            return userEvents
-        except (Exception, DatabaseError) as error:
-            print(error)
-            raise error
-        finally:
-            if dbConnection is not None:
-                dbConnection.close()
+    if (event.eventCode == 'WARN'):
+        eventParms["name"] = "Warned"
+    elif (event.eventCode == 'BAN'):
+        eventParms["name"] = "Banned"
+    elif (event.eventCode == 'KICK'):
+        eventParms["name"] = "Kicked"
+    elif (event.eventCode == 'MUTE'):
+        eventParms["name"] = "Muted"
+
+    eventParms["timestamp"] = event.eventTimestamp
+    eventParms["reason"] = event.eventReason
+    return eventParms
