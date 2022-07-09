@@ -26,61 +26,62 @@ adminEventCodeTableSql = """
 
 adminEventCodeCheckSql = """
     SELECT * FROM admin_event_codes 
-        FETCH FIRST ROW ONLY;
+    FETCH FIRST ROW ONLY;
 """
 
 adminEventCodeInsertsSql = """
     INSERT INTO admin_event_codes (event_code, event_description)
-        VALUES
-            ('WARN', 'User warned'),
-            ('KICK', 'User kicked'),
-            ('BAN', 'User banned');
+    VALUES
+        ('WARN', 'User warned'),
+        ('KICK', 'User kicked'),
+        ('BAN', 'User banned'),
+        ('MUTE', 'User muted');
 """
 
-class DBUtils:
+def getDBConnection(filename='database.ini', section='postgresql'):
+    parser = ConfigParser()
+    parser.read(filename)
 
-    def getDBConnection(filename='database.ini', section='postgresql'):
-        parser = ConfigParser()
-        parser.read(filename)
+    dbConfig = {}
+    if parser.has_section(section):
+        params = parser.items(section)
+        for param in params:
+            dbConfig[param[0]] = param[1]
+    else:
+        raise Exception('Section {0} not found in the {1} file'.format(section, filename))
 
-        dbConfig = {}
-        if parser.has_section(section):
-            params = parser.items(section)
-            for param in params:
-                dbConfig[param[0]] = param[1]
-        else:
-            raise Exception('Section {0} not found in the {1} file'.format(section, filename))
+    dbConnection = None
 
-        dbConnection = None
+    try:
+        dbConnection = psycopg2.connect(**dbConfig)
 
-        try:
-            dbConnection = psycopg2.connect(**dbConfig)
+        return dbConnection
+    except (Exception, psycopg2.DatabaseError) as error:
+        print(error)
+        if dbConnection is not None:
+            dbConnection.close()
 
-            return dbConnection
-        except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            if dbConnection is not None:
-                dbConnection.close()
+def checkTables():
+    dbConnection = getDBConnection()
 
-    def checkTables(dbConnection):
-        try:
-            dbCursor = dbConnection.cursor()
-            tableCommands = (adminEventCodeTableSql, adminEventTableSql)
+    try:
+        dbCursor = dbConnection.cursor()
+        tableCommands = (adminEventCodeTableSql, adminEventTableSql)
 
-            for command in tableCommands:
-                dbCursor.execute(command)
+        for command in tableCommands:
+            dbCursor.execute(command)
 
-            dbCursor.execute(adminEventCodeCheckSql)
-            checkRow = dbCursor.fetchone()
+        dbCursor.execute(adminEventCodeCheckSql)
+        checkRow = dbCursor.fetchone()
 
-            if checkRow is None:
-                dbCursor.execute(adminEventCodeInsertsSql)
+        if checkRow is None:
+            dbCursor.execute(adminEventCodeInsertsSql)
 
-            dbConnection.commit()
-            dbCursor.close()
-        except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            raise error
-        finally:
-            if dbConnection is not None:
-                dbConnection.close()
+        dbConnection.commit()
+        dbCursor.close()
+    except (Exception, psycopg2.DatabaseError) as error:
+        print(error)
+        raise error
+    finally:
+        if dbConnection is not None:
+            dbConnection.close()
