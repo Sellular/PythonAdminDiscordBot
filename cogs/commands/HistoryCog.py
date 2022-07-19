@@ -30,13 +30,13 @@ class HistoryCog(commands.Cog):
         embed.set_thumbnail(url = f"{ member.avatar_url }")
 
         for event in userEvents:
-            embedParms = AdminEventTable.formatEventToEmbedParms(event)
+            embedParms = AdminEventTable.formatEvent(event)
 
             embedValue = f"{ embedParms['timestamp'] }"
             if embedParms['reason'] is not None:
                 embedValue = f"{ embedParms['reason'] } -- { embedValue }"
 
-            embed.add_field(name = embedParms["name"], value = embedValue, inline = False)
+            embed.add_field(name = f'{ embedParms["name"]} - { embedParms["eventID"] }', value = embedValue, inline = False)
 
         await ctx.send(embed = embed)
 
