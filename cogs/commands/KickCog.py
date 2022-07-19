@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-from utils import AdminEventTable
+from utils import AdminEventTable, DiscordUtils
 
 import psycopg2
 
