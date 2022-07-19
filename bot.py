@@ -1,11 +1,10 @@
-from dotenv import dotenv_values
-envValues = dotenv_values(".env")
-
-from utils import DBUtils, SetupUtils
+from utils import DBUtils, SetupUtils, GeneralUtils
 
 DBUtils.checkTables()
 
 bot = SetupUtils.setupBot()
 SetupUtils.importCogs(bot)
 
-bot.run(envValues["DISCORD_TOKEN"])
+botConfig = GeneralUtils.getConfig('config.ini', 'bot')
+
+bot.run(botConfig['token'])

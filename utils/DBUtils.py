@@ -1,14 +1,17 @@
 from configparser import ConfigParser
 import psycopg2
 
+from utils import GeneralUtils
+
 adminEventTableSql = """
     CREATE TABLE IF NOT EXISTS admin_events (
-        event_id        INT         GENERATED ALWAYS AS IDENTITY,
-        user_id         TEXT        NOT NULL,
-        guild_id        TEXT        NOT NULL,
-        event_code      VARCHAR(4)  NOT NULL,
-        event_reason    TEXT,
-        event_timestamp TIMESTAMP   NOT NULL 
+        event_id            INT         GENERATED ALWAYS AS IDENTITY,
+        user_id             TEXT        NOT NULL,
+        guild_id            TEXT        NOT NULL,
+        submitted_user_id   TEXT        NOT NULL,
+        event_code          VARCHAR(4)  NOT NULL,
+        event_reason        TEXT,
+        event_timestamp     TIMESTAMP   NOT NULL 
                                     DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY(event_id),
         FOREIGN KEY(event_code) REFERENCES admin_event_codes(event_code)
@@ -38,17 +41,11 @@ adminEventCodeInsertsSql = """
         ('MUTE', 'User muted');
 """
 
-def getDBConnection(filename='database.ini', section='postgresql'):
+def getDBConnection(filename = 'config.ini', section = 'postgresql'):
     parser = ConfigParser()
     parser.read(filename)
 
-    dbConfig = {}
-    if parser.has_section(section):
-        params = parser.items(section)
-        for param in params:
-            dbConfig[param[0]] = param[1]
-    else:
-        raise Exception('Section {0} not found in the {1} file'.format(section, filename))
+    dbConfig = GeneralUtils.getConfig('config.ini', 'postgresql')
 
     dbConnection = None
 
