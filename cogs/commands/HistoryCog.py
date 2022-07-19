@@ -10,7 +10,7 @@ class HistoryCog(commands.Cog):
         self.bot = bot
 
     @commands.command()
-    async def history(self, ctx, member: discord.Member, limit: int = None):
+    async def history(self, ctx, member: discord.Member, limit: int = 20):
         userEvents = None
 
         try:
