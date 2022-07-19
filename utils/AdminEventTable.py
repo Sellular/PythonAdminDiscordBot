@@ -7,14 +7,16 @@ adminEventInsertSql = """
     INSERT INTO admin_events (
         user_id,
         guild_id,
+        submitted_user_id,
         event_code, 
         event_reason
     ) VALUES (
         %s,
         %s,
         %s,
+        %s,
         %s
-    )
+    ) RETURNING *
 """
 
 adminEventSelectByUserSql = """
@@ -44,16 +46,52 @@ adminEventSelectByIdSql = """
     SELECT *
     FROM admin_events
     WHERE event_id = %s
-    ORDER BY event_timestamp
     FETCH FIRST ROW ONLY
 """
 
-def insert(userID, guildID, eventCode, reason = None):
+adminEventUpdateByIdSql = """
+    UPDATE admin_events
+    SET event_reason = %s    
+    WHERE event_id = %s
+"""
+
+def insert(userID, guildID, submittedUserID, eventCode, reason = None):
+    dbConnection = DBUtils.getDBConnection()
+
+    insertedEvent = None
+    try:
+        dbCursor = dbConnection.cursor()
+
+        dbCursor.execute(adminEventInsertSql, (userID, guildID, submittedUserID, eventCode, reason))
+        insertedRow = dbCursor.fetchone()
+        
+        insertedEvent = AdminEvent(
+            insertedRow[0],
+            insertedRow[1],
+            insertedRow[2],
+            insertedRow[3],
+            insertedRow[4],
+            insertedRow[5],
+            insertedRow[6]
+        )
+
+        dbConnection.commit()
+        dbCursor.close()
+    except (Exception, DatabaseError) as error:
+        print(error)
+        raise error
+    finally:
+        if dbConnection is not None:
+            dbConnection.close()
+
+    return insertedEvent
+
+def updateEventById(id, reason):
     dbConnection = DBUtils.getDBConnection()
     try:
         dbCursor = dbConnection.cursor()
 
-        dbCursor.execute(adminEventInsertSql, (userID, guildID, eventCode, reason))
+        dbCursor.execute(adminEventUpdateByIdSql, (reason, id))
 
         dbConnection.commit()
         dbCursor.close()
@@ -68,7 +106,7 @@ def getEventById(id):
     dbConnection = DBUtils.getDBConnection()
     try:
         dbCursor = dbConnection.cursor()
-        dbCursor.execute(adminEventSelectByIdSql, (id))
+        dbCursor.execute(adminEventSelectByIdSql, (id,))
 
         row = dbCursor.fetchone()
         userEvent = None
@@ -80,7 +118,8 @@ def getEventById(id):
                 row[2],
                 row[3],
                 row[4],
-                row[5]
+                row[5],
+                row[6]
             )
 
         dbCursor.close()
@@ -112,7 +151,8 @@ def getEventsByUserAndGuild(userID, guildID, limit):
                 row[2],
                 row[3],
                 row[4],
-                row[5]
+                row[5],
+                row[6]
             ))
             row = dbCursor.fetchone()
 
@@ -126,11 +166,12 @@ def getEventsByUserAndGuild(userID, guildID, limit):
         if dbConnection is not None:
             dbConnection.close()
 
-def formatEventToEmbedParms(event):
+def formatEvent(event: AdminEvent):
     eventParms = {
         "name": '',
         "value": '',
-        "reason": ''
+        "reason": '',
+        "eventID": ''
     }
 
     if (event.eventCode == 'WARN'):
@@ -144,4 +185,5 @@ def formatEventToEmbedParms(event):
 
     eventParms["timestamp"] = event.eventTimestamp
     eventParms["reason"] = event.eventReason
+    eventParms["eventID"] = event.eventID
     return eventParms
