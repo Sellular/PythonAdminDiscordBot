@@ -17,7 +17,9 @@ class BanCog(commands.Cog):
                 member.ban()
                 dm_message = f"**Hello { member.name }!** You have received a banned from { ctx.guild.name }{ 'for the following reason: **' + reason + '**' if reason is not None else '' }."
                 DiscordUtils.send_dm(member, dm_message)
-                AdminEventTable.insert(str(member.id), str(member.guild.id), 'BAN', reason)
+                insertedEvent = AdminEventTable.insert(str(member.id), str(member.guild.id), 'BAN', reason)
+                await DiscordUtils.logToModlog(insertedEvent, member.guild)
+                
                 await ctx.reply(str(member) + ' has been banned.')
             except (Exception, psycopg2.DatabaseError):
                 await ctx.reply('Error banning user. Contact bot developer/server administrator.')

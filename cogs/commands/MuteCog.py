@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 
 from asyncio import sleep
-from utils import AdminEventTable
+from utils import AdminEventTable, DiscordUtils
 
 import psycopg2
 
@@ -17,7 +17,8 @@ class MuteCog(commands.Cog):
             muteRole = discord.utils.get(member.guild.roles, name = 'Muted')
 
             await member.add_roles(muteRole)
-            AdminEventTable.insert(str(member.id), str(member.guild.id), 'MUTE', reason)
+            insertedEvent = AdminEventTable.insert(str(member.id), str(member.guild.id), 'MUTE', reason)
+            await DiscordUtils.logToModlog(insertedEvent, member.guild)
 
             await ctx.reply(f"{ member } has been muted for { duration } seconds.")
 

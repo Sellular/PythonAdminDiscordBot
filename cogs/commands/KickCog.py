@@ -15,7 +15,9 @@ class KickCog(commands.Cog):
         if (member is not None):
             try:
                 member.kick()
-                AdminEventTable.insert(str(member.id), str(member.guild.id), 'KICK', reason)
+                insertedEvent = AdminEventTable.insert(str(member.id), str(member.guild.id), 'KICK', reason)
+                await DiscordUtils.logToModlog(insertedEvent, member.guild)
+                
                 await ctx.reply(str(member) + ' has been kicked.')
             except (Exception, psycopg2.DatabaseError):
                 await ctx.reply('Error kicking user. Contact bot developer/server administrator.')

@@ -13,7 +13,7 @@ class WarnCog(commands.Cog):
     @commands.has_permissions(kick_members = True)
     async def warn(self, ctx, member: discord.Member, *, reason = None):
         try:
-            await DiscordUtils.doWarn(member, reason)
+            await DiscordUtils.doWarn(member, ctx.author, reason)
             await ctx.reply(str(member) + ' has been warned.')
         except (Exception, psycopg2.DatabaseError):
             await ctx.reply('Error warning user. Contact bot developer/server administrator.')
@@ -25,5 +25,5 @@ class WarnCog(commands.Cog):
         elif isinstance(error, commands.MissingRequiredArgument):
             await ctx.reply("Invalid warn format. (ex. -warn @User reason)")
 
-def setup(bot):
+def setup(bot: commands.Bot):
     bot.add_cog(WarnCog(bot))
